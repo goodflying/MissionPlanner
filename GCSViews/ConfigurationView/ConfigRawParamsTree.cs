@@ -11,6 +11,7 @@ using System.Timers;
 using System.Windows.Forms;
 using BrightIdeasSoftware;
 using log4net;
+using Microsoft.Scripting.Utils;
 using MissionPlanner.Controls;
 using MissionPlanner.Utilities;
 
@@ -51,7 +52,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             {
                 if (!String.IsNullOrEmpty(Settings.Instance["rawtree_" + col.Text + "_width"]))
                 {
-                    col.Width = Settings.Instance.GetInt32("rawtree_" + col.Text + "_width");
+                    col.Width = Math.Max(50, Settings.Instance.GetInt32("rawtree_" + col.Text + "_width"));
                 }
             }
 
@@ -260,7 +261,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             if (!MainV2.comPort.BaseStream.IsOpen)
                 return;
 
-            if (!MainV2.comPort.MAV.cs.armed || DialogResult.OK ==
+            if (!MainV2.comPort.MAV.cs.armed || (int)DialogResult.OK ==
                 CustomMessageBox.Show(Strings.WarningUpdateParamList, Strings.ERROR, MessageBoxButtons.OKCancel))
             {
                 ((Control) sender).Enabled = false;
@@ -343,7 +344,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             foreach (string item in MainV2.comPort.MAV.param.Keys)
                 sorted.Add(item);
 
-            sorted.Sort();
+            sorted.Sort(ComparisonTree);
 
             var roots = new List<data>();
             var lastroot = new data();
@@ -410,6 +411,30 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
                 Params.AddObject(item);
             }
+        }
+
+        private int ComparisonTree(string s, string s1)
+        {
+            var list = Settings.Instance.GetList("fav_params");
+
+            var fav1 = list.Contains(s);
+            var fav2 = list.Contains(s1);
+
+            var ans = s.CompareTo(s1);
+
+            // both fav use string compare
+            if (fav1 == fav2)
+                return ans;
+
+            // fav1 is greater
+            if (fav1 && !fav2)
+                return -1;
+
+            // fav1 is not greater
+            if (!fav1 && fav2)
+                return 1;
+
+            return ans;
         }
 
         private void updatedefaultlist(object crap)
@@ -536,7 +561,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             if (
                 CustomMessageBox.Show("Reset all parameters to default\nAre you sure!!", "Reset",
-                    MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    MessageBoxButtons.YesNo) == (int)DialogResult.Yes)
             {
                 try
                 {
@@ -585,7 +610,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                         if (
                             CustomMessageBox.Show(
                                 ((data) e.RowObject).paramname + " value is out of range. Do you want to continue?",
-                                "Out of range", MessageBoxButtons.YesNo) == DialogResult.No)
+                                "Out of range", MessageBoxButtons.YesNo) == (int)DialogResult.No)
                         {
                             return;
                         }
@@ -608,10 +633,19 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
         private void Params_FormatRow(object sender, FormatRowEventArgs e)
         {
+            var shortv = _changes.Keys.Select(a => {
+                if (a.ToString().Contains('_'))
+                    return a.ToString().Substring(0, a.ToString().IndexOf('_'));
+                return "";
+            });
+
             if (e != null && e.ListView != null && e.ListView.Items.Count > 0)
             {
-                if (_changes.ContainsKey(((data) e.Model).paramname))
+                var it = ((data) e.Model);
+                if (_changes.ContainsKey(it.paramname) || shortv.Contains(it.paramname))
+                {
                     e.Item.BackColor = Color.Green;
+                }
                 else
                     e.Item.BackColor = BackColor;
             }

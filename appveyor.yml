@@ -7,7 +7,6 @@ init:
 - cmd: 
 cache:
     - packages -> appveyor.yml
-    - date.txt
 environment:
   email:
     secure: dkWdmOxf3t/x2H0gEo1GurKM8Due1idnog5VJtUlSEA=
@@ -17,7 +16,9 @@ build_script:
 - cmd: >-
     dotnet --info
 
-    c:\mp\.nuget\nuget.exe update -self
+    rem c:\mp\.nuget\nuget.exe update -self
+
+    c:\mp\.nuget\nuget.exe sources Add -Name "myget" -Source https://dotnet.myget.org/F/dotnet-core/api/v3/index.json
     
     c:\mp\.nuget\nuget.exe restore
     

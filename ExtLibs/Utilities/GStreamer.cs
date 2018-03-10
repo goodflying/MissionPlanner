@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.IO.Compression;
 using System.IO.Pipes;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -252,7 +253,7 @@ namespace MissionPlanner.Utilities
             string pathvar = System.Environment.GetEnvironmentVariable("PATH");
             System.Environment.SetEnvironmentVariable("PATH",
                 pathvar +
-                @";C:\gstreamer\1.0\x86_64\bin\;D:\gstreamer\1.0\x86_64\bin\;E:\gstreamer\1.0\x86_64\bin\;F:\gstreamer\1.0\x86_64\bin\");
+                @";F:\gstreamer\1.0\x86_64\bin\;C:\ProgramData\Mission Planner\gstreamer\1.0\x86\bin\;C:\gstreamer\1.0\x86_64\bin\;D:\gstreamer\1.0\x86_64\bin\;E:\gstreamer\1.0\x86_64\bin\;F:\gstreamer\1.0\x86_64\bin\");
             pathvar = System.Environment.GetEnvironmentVariable("PATH");
             System.Environment.SetEnvironmentVariable("PATH",
                 pathvar +
@@ -269,8 +270,9 @@ namespace MissionPlanner.Utilities
             /* Set up the pipeline */
 
             var pipeline = NativeMethods.gst_parse_launch(
-                //@"videotestsrc ! video/x-raw, width=1280, height=720, framerate=30/1 ! clockoverlay ! x264enc speed-preset=1 threads=1 sliced-threads=1 mb-tree=0 rc-lookahead=0 sync-lookahead=0 bframes=0 ! rtph264pay ! application/x-rtp ! rtph264depay ! avdec_h264 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink",
-                @"-v udpsrc port=5601 buffer-size=300000 ! application/x-rtp ! rtph264depay ! avdec_h264 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink",
+                @"videotestsrc ! video/x-raw, width=1280, height=720, framerate=30/1 ! clockoverlay ! x264enc speed-preset=1 threads=1 sliced-threads=1 mb-tree=0 rc-lookahead=0 sync-lookahead=0 bframes=0 ! rtph264pay ! application/x-rtp ! rtph264depay ! avdec_h264 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink",
+                //@"-v udpsrc port=5601 buffer-size=300000 ! application/x-rtp ! rtph264depay ! avdec_h264 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink",
+                //@"rtspsrc location=rtsp://192.168.1.252/video1 ! application/x-rtp ! rtph264depay ! avdec_h264 ! videoconvert ! video/x-raw,format=BGRA ! appsink name=outsink",
                 out error);
 
             Console.WriteLine(error);
@@ -411,6 +413,7 @@ namespace MissionPlanner.Utilities
                 }
             }
 
+            log.Info("No gstreamer found");
             return "";
         }
 
@@ -472,7 +475,7 @@ namespace MissionPlanner.Utilities
                         if (!externalpipeline)
                         {
                             psi.Arguments += String.Format(
-                                " ! queue leaky=2 ! avenc_mjpeg ! queue leaky=2 ! tcpserversink host=127.0.0.1 port={0} sync=false",
+                                " ! queue leaky=2 ! jpegenc ! queue leaky=2 ! tcpserversink host=127.0.0.1 port={0} sync=false",
                                 OutputPort);
                         }
                         else
@@ -489,6 +492,7 @@ namespace MissionPlanner.Utilities
 
                     log.Info("Starting " + psi.FileName + " " + psi.Arguments);
 
+                    psi.RedirectStandardInput = true;
                     psi.RedirectStandardOutput = true;
                     psi.RedirectStandardError = true;
 
@@ -506,6 +510,10 @@ namespace MissionPlanner.Utilities
                     System.Threading.ThreadPool.QueueUserWorkItem(_Start);
 
                     return process;
+                }
+                else
+                {
+                    log.Info("No gstreamer found");
                 }
             }
             return null;
@@ -918,8 +926,21 @@ namespace MissionPlanner.Utilities
 
                 if (run != null)
                 {
+                    try
+                    {
+                        log.Info("StandardInput close");
+                        run.StandardInput.Write('\x3');
+                        run.StandardInput.Close();
+                    } catch { }
+
                     if (!run.CloseMainWindow())
+                    {
+                        Thread.Sleep(100);
+                        log.Info("Kill");
                         run.Kill();
+                    }
+
+                    log.Info("Close");
                     run.Close();
                 }
             }
@@ -936,6 +957,21 @@ namespace MissionPlanner.Utilities
             {
                 Stop(process);
             }
+        }
+
+        public static void DownloadGStreamer()
+        {
+            var output = Settings.GetDataDirectory() + "gstreamer-1.0-x86-1.9.2.zip";
+
+            Download.ParallelDownloadFile(
+                "http://firmware.ardupilot.org/MissionPlanner/gstreamer/gstreamer-1.0-x86-1.9.2.zip",
+                output);
+
+            ZipArchive zip = new ZipArchive(File.OpenRead(output));
+
+            zip.ExtractToDirectory(Settings.GetDataDirectory());
+
+            zip.Dispose();
         }
     }
 }

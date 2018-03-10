@@ -62,7 +62,7 @@ namespace MissionPlanner
                 {
                     var ogl = new OpenGLtest2();
 
-                    //Controls.Add(ogl);
+                    Controls.Add(ogl);
 
                     ogl.Dock = DockStyle.Fill;
 
@@ -1146,6 +1146,11 @@ namespace MissionPlanner
         private void but_mavinspector_Click(object sender, EventArgs e)
         {
             new MAVLinkInspector(MainV2.comPort).Show();
+        }
+
+        private void BUT_driverclean_Click(object sender, EventArgs e)
+        {
+            CleanDrivers.Clean();
         }
     }
 }

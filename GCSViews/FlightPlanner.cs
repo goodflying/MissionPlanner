@@ -38,6 +38,7 @@ using ILog = log4net.ILog;
 using Placemark = SharpKml.Dom.Placemark;
 using Point = System.Drawing.Point;
 using System.Text.RegularExpressions;
+using MissionPlanner.Grid;
 using MissionPlanner.Plugin;
 
 namespace MissionPlanner.GCSViews
@@ -118,7 +119,7 @@ namespace MissionPlanner.GCSViews
             if (pointno == "H")
             {
                 // auto update home alt
-                TXT_homealt.Text = (srtm.getAltitude(lat, lng).alt * CurrentState.multiplierdist).ToString();
+                TXT_homealt.Text = (srtm.getAltitude(lat, lng).alt * CurrentState.multiplieralt).ToString();
 
                 TXT_homelat.Text = lat.ToString();
                 TXT_homelng.Text = lng.ToString();
@@ -196,8 +197,8 @@ namespace MissionPlanner.GCSViews
                         int oldsrtm =
                             (int)
                                 ((srtm.getAltitude(double.Parse(celllat.Value.ToString()),
-                                    double.Parse(celllon.Value.ToString())).alt)*CurrentState.multiplierdist);
-                        int newsrtm = (int) ((srtm.getAltitude(lat, lng).alt)*CurrentState.multiplierdist);
+                                    double.Parse(celllon.Value.ToString())).alt)*CurrentState.multiplieralt);
+                        int newsrtm = (int) ((srtm.getAltitude(lat, lng).alt)*CurrentState.multiplieralt);
                         int newh = (int) (ans + newsrtm - oldsrtm);
 
                         cell.Value = newh;
@@ -272,7 +273,7 @@ namespace MissionPlanner.GCSViews
                         {
                             //abs
                             cell.Value =
-                                ((srtm.getAltitude(lat, lng).alt)*CurrentState.multiplierdist +
+                                ((srtm.getAltitude(lat, lng).alt)*CurrentState.multiplieralt +
                                  int.Parse(TXT_DefaultAlt.Text)).ToString();
                         }
                         else if ((altmode) CMB_altmode.SelectedValue == altmode.Terrain)
@@ -283,11 +284,11 @@ namespace MissionPlanner.GCSViews
                         {
                             //relative and verify
                             cell.Value =
-                                ((int) (srtm.getAltitude(lat, lng).alt)*CurrentState.multiplierdist +
+                                ((int) (srtm.getAltitude(lat, lng).alt)*CurrentState.multiplieralt +
                                  int.Parse(TXT_DefaultAlt.Text) -
                                  (int)
                                      srtm.getAltitude(MainV2.comPort.MAV.cs.HomeLocation.Lat,
-                                         MainV2.comPort.MAV.cs.HomeLocation.Lng).alt*CurrentState.multiplierdist)
+                                         MainV2.comPort.MAV.cs.HomeLocation.Lng).alt*CurrentState.multiplieralt)
                                     .ToString();
                         }
                     }
@@ -1250,12 +1251,17 @@ namespace MissionPlanner.GCSViews
 
         void updateRowNumbers()
         {
+            if (this.IsDisposed || this.Disposing)
+                return;
+
             // number rows 
             this.BeginInvoke((MethodInvoker) delegate
             {
                 // thread for updateing row numbers
                 for (int a = 0; a < Commands.Rows.Count - 0; a++)
                 {
+                    if (this.IsDisposed || this.Disposing)
+                        return;
                     try
                     {
                         if (Commands.Rows[a].HeaderCell.Value == null)
@@ -1855,7 +1861,7 @@ namespace MissionPlanner.GCSViews
                                 home.id = (ushort)MAVLink.MAV_CMD.WAYPOINT;
                                 home.lat = (double.Parse(TXT_homelat.Text));
                                 home.lng = (double.Parse(TXT_homelng.Text));
-                                home.alt = (float.Parse(TXT_homealt.Text) / CurrentState.multiplierdist); // use saved home
+                                home.alt = (float.Parse(TXT_homealt.Text) / CurrentState.multiplieralt); // use saved home
                             }
                             catch { }
 
@@ -1906,25 +1912,25 @@ namespace MissionPlanner.GCSViews
                             sw.Write("\t" + mode);
                             sw.Write("\t" +
                                      double.Parse(Commands.Rows[a].Cells[Param1.Index].Value.ToString())
-                                         .ToString("0.000000", new CultureInfo("en-US")));
+                                         .ToString("0.00000000", new CultureInfo("en-US")));
                             sw.Write("\t" +
                                      double.Parse(Commands.Rows[a].Cells[Param2.Index].Value.ToString())
-                                         .ToString("0.000000", new CultureInfo("en-US")));
+                                         .ToString("0.00000000", new CultureInfo("en-US")));
                             sw.Write("\t" +
                                      double.Parse(Commands.Rows[a].Cells[Param3.Index].Value.ToString())
-                                         .ToString("0.000000", new CultureInfo("en-US")));
+                                         .ToString("0.00000000", new CultureInfo("en-US")));
                             sw.Write("\t" +
                                      double.Parse(Commands.Rows[a].Cells[Param4.Index].Value.ToString())
-                                         .ToString("0.000000", new CultureInfo("en-US")));
+                                         .ToString("0.00000000", new CultureInfo("en-US")));
                             sw.Write("\t" +
                                      double.Parse(Commands.Rows[a].Cells[Lat.Index].Value.ToString())
-                                         .ToString("0.000000", new CultureInfo("en-US")));
+                                         .ToString("0.00000000", new CultureInfo("en-US")));
                             sw.Write("\t" +
                                      double.Parse(Commands.Rows[a].Cells[Lon.Index].Value.ToString())
-                                         .ToString("0.000000", new CultureInfo("en-US")));
+                                         .ToString("0.00000000", new CultureInfo("en-US")));
                             sw.Write("\t" +
                                      (double.Parse(Commands.Rows[a].Cells[Alt.Index].Value.ToString())/
-                                      CurrentState.multiplierdist).ToString("0.000000", new CultureInfo("en-US")));
+                                      CurrentState.multiplieralt).ToString("0.000000", new CultureInfo("en-US")));
                             sw.Write("\t" + 1);
                             sw.WriteLine("");
                         }
@@ -1962,7 +1968,7 @@ namespace MissionPlanner.GCSViews
                 {
                     if (
                         CustomMessageBox.Show("This will clear your existing planned mission, Continue?", "Confirm",
-                            MessageBoxButtons.OKCancel) != DialogResult.OK)
+                            MessageBoxButtons.OKCancel) != (int)DialogResult.OK)
                     {
                         return;
                     }
@@ -2096,7 +2102,7 @@ namespace MissionPlanner.GCSViews
         {
             if ((altmode) CMB_altmode.SelectedValue == altmode.Absolute)
             {
-                if (DialogResult.No ==
+                if ((int)DialogResult.No ==
                     CustomMessageBox.Show("Absolute Alt is selected are you sure?", "Alt Mode", MessageBoxButtons.YesNo))
                 {
                     CMB_altmode.SelectedValue = (int) altmode.Relative;
@@ -2198,7 +2204,7 @@ namespace MissionPlanner.GCSViews
 
                 temp.alt =
                     (float)
-                        (double.Parse(Commands.Rows[a].Cells[Alt.Index].Value.ToString())/CurrentState.multiplierdist);
+                        (double.Parse(Commands.Rows[a].Cells[Alt.Index].Value.ToString())/CurrentState.multiplieralt);
                 temp.lat = (double.Parse(Commands.Rows[a].Cells[Lat.Index].Value.ToString()));
                 temp.lng = (double.Parse(Commands.Rows[a].Cells[Lon.Index].Value.ToString()));
 
@@ -2251,7 +2257,7 @@ namespace MissionPlanner.GCSViews
                     home.id = (ushort)MAVLink.MAV_CMD.WAYPOINT;
                     home.lat = (double.Parse(TXT_homelat.Text));
                     home.lng = (double.Parse(TXT_homelng.Text));
-                    home.alt = (float.Parse(TXT_homealt.Text)/CurrentState.multiplierdist); // use saved home
+                    home.alt = (float.Parse(TXT_homealt.Text)/CurrentState.multiplieralt); // use saved home
                 }
                 catch
                 {
@@ -2556,7 +2562,7 @@ namespace MissionPlanner.GCSViews
                 }
 
                 cell = Commands.Rows[i].Cells[Alt.Index] as DataGridViewTextBoxCell;
-                cell.Value = temp.alt*CurrentState.multiplierdist;
+                cell.Value = temp.alt*CurrentState.multiplieralt;
                 cell = Commands.Rows[i].Cells[Lat.Index] as DataGridViewTextBoxCell;
                 cell.Value = temp.lat;
                 cell = Commands.Rows[i].Cells[Lon.Index] as DataGridViewTextBoxCell;
@@ -2590,17 +2596,17 @@ namespace MissionPlanner.GCSViews
                     {
                         if (cellhome.Value.ToString() != TXT_homelat.Text && cellhome.Value.ToString() != "0")
                         {
-                            DialogResult dr = CustomMessageBox.Show("Reset Home to loaded coords", "Reset Home Coords",
+                            var dr = CustomMessageBox.Show("Reset Home to loaded coords", "Reset Home Coords",
                                 MessageBoxButtons.YesNo);
 
-                            if (dr == DialogResult.Yes)
+                            if (dr == (int)DialogResult.Yes)
                             {
                                 TXT_homelat.Text = (double.Parse(cellhome.Value.ToString())).ToString();
                                 cellhome = Commands.Rows[0].Cells[Lon.Index] as DataGridViewTextBoxCell;
                                 TXT_homelng.Text = (double.Parse(cellhome.Value.ToString())).ToString();
                                 cellhome = Commands.Rows[0].Cells[Alt.Index] as DataGridViewTextBoxCell;
                                 TXT_homealt.Text =
-                                    (double.Parse(cellhome.Value.ToString())*CurrentState.multiplierdist).ToString();
+                                    (double.Parse(cellhome.Value.ToString())*CurrentState.multiplieralt).ToString();
                             }
                         }
                     }
@@ -4049,7 +4055,7 @@ namespace MissionPlanner.GCSViews
                 log.Error(ex);
             }
 
-            return alt*CurrentState.multiplierdist;
+            return alt*CurrentState.multiplieralt;
         }
 
         private void TXT_homelat_Enter(object sender, EventArgs e)
@@ -4639,7 +4645,7 @@ namespace MissionPlanner.GCSViews
                     try
                     {
                         mBorders.wprad =
-                            (int) (Settings.Instance.GetFloat("TXT_WPRad")/CurrentState.multiplierdist);
+                            (int) (Settings.Instance.GetFloat("TXT_WPRad")/CurrentState.multiplieralt);
                     }
                     catch (Exception ex)
                     {
@@ -4706,7 +4712,7 @@ namespace MissionPlanner.GCSViews
             if (MainV2.comPort.MAV.param.ContainsKey("FENCE_MINALT"))
             {
                 string minalts =
-                    (int.Parse(MainV2.comPort.MAV.param["FENCE_MINALT"].ToString())*CurrentState.multiplierdist)
+                    (int.Parse(MainV2.comPort.MAV.param["FENCE_MINALT"].ToString())*CurrentState.multiplieralt)
                         .ToString(
                             "0");
                 if (DialogResult.Cancel == InputBox.Show("Min Alt", "Box Minimum Altitude?", ref minalts))
@@ -4722,7 +4728,7 @@ namespace MissionPlanner.GCSViews
             if (MainV2.comPort.MAV.param.ContainsKey("FENCE_MAXALT"))
             {
                 string maxalts =
-                    (int.Parse(MainV2.comPort.MAV.param["FENCE_MAXALT"].ToString())*CurrentState.multiplierdist)
+                    (int.Parse(MainV2.comPort.MAV.param["FENCE_MAXALT"].ToString())*CurrentState.multiplieralt)
                         .ToString(
                             "0");
                 if (DialogResult.Cancel == InputBox.Show("Max Alt", "Box Maximum Altitude?", ref maxalts))
@@ -5188,7 +5194,7 @@ namespace MissionPlanner.GCSViews
             catch
             {
                 CustomMessageBox.Show("Please fix your default alt value");
-                TXT_DefaultAlt.Text = (50*CurrentState.multiplierdist).ToString("0");
+                TXT_DefaultAlt.Text = (50*CurrentState.multiplieralt).ToString("0");
             }
         }
 
@@ -5357,9 +5363,9 @@ namespace MissionPlanner.GCSViews
             RectLatLng area = MainMap.SelectedArea;
             if (area.IsEmpty)
             {
-                DialogResult res = CustomMessageBox.Show("No ripp area defined, ripp displayed on screen?", "Rip",
+                var res = CustomMessageBox.Show("No ripp area defined, ripp displayed on screen?", "Rip",
                     MessageBoxButtons.YesNo);
-                if (res == DialogResult.Yes)
+                if (res == (int)DialogResult.Yes)
                 {
                     area = MainMap.ViewArea;
                 }
@@ -5475,7 +5481,7 @@ namespace MissionPlanner.GCSViews
                             parser.ElementAdded += parser_ElementAdded;
                             parser.ParseString(kml, false);
 
-                            if (DialogResult.Yes ==
+                            if ((int)DialogResult.Yes ==
                                 CustomMessageBox.Show(Strings.Do_you_want_to_load_this_into_the_flight_data_screen, Strings.Load_data,
                                     MessageBoxButtons.YesNo))
                             {
@@ -5491,7 +5497,7 @@ namespace MissionPlanner.GCSViews
 
                             if (
                                 CustomMessageBox.Show(Strings.Zoom_To, Strings.Zoom_to_the_center_or_the_loaded_file, MessageBoxButtons.YesNo) ==
-                                DialogResult.Yes)
+                                (int)DialogResult.Yes)
                             {
                                 MainMap.SetZoomToFitRect(GetBoundingLayer(kmlpolygonsoverlay));
                             }
@@ -6192,7 +6198,7 @@ namespace MissionPlanner.GCSViews
                     {
                         Alt = (int) plla.Alt,
                         ToolTipMode = MarkerTooltipMode.OnMouseOver,
-                        ToolTipText = "Rally Point" + "\nAlt: " + (plla.Alt*CurrentState.multiplierdist)
+                        ToolTipText = "Rally Point" + "\nAlt: " + (plla.Alt*CurrentState.multiplieralt)
                     });
                 }
                 catch
@@ -6241,7 +6247,7 @@ namespace MissionPlanner.GCSViews
             if (int.TryParse(altstring, out alt))
             {
                 PointLatLngAlt rallypt = new PointLatLngAlt(MouseDownStart.Lat, MouseDownStart.Lng,
-                    alt/CurrentState.multiplierdist, "Rally Point");
+                    alt/CurrentState.multiplieralt, "Rally Point");
                 rallypointoverlay.Markers.Add(
                     new GMapMarkerRallyPt(rallypt)
                     {

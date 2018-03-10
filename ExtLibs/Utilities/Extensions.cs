@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using MissionPlanner.Comms;
 
 namespace MissionPlanner.Utilities
 {
@@ -57,6 +60,70 @@ namespace MissionPlanner.Utilities
                    || value is float
                    || value is double
                    || value is decimal;
+        }
+
+        public static IEnumerable<MAVLink.MAVLinkMessage> GetMessageOfType(this CommsFile commsFile,
+            MAVLink.MAVLINK_MSG_ID[] packetids = null, bool hasTimestamp = false)
+        {
+            var parse = new MAVLink.MavlinkParse(hasTimestamp);
+
+            var list = packetids.Cast<uint>();
+
+            while (commsFile.BytesToRead > 0)
+            {
+                var packet = parse.ReadPacket(commsFile.BaseStream);
+                if (packet == null)
+                    continue;
+                if (packetids == null || list.Contains(packet.msgid))
+                    yield return packet;
+            }
+        }
+
+        public static object GetPropertyOrField(this object obj, string name)
+        {
+            var type = obj.GetType();
+            var pi = type.GetProperty(name);
+            if (pi == null)
+            {
+                var fi1 = type.GetField(name);
+                return fi1.GetValue(obj);
+            }
+            return pi.GetValue(obj);
+        }
+
+        static ConcurrentDictionary<Action,long> reentryDictionary = new ConcurrentDictionary<Action, long>();
+
+        public static void ProtectReentry(Action action)
+        {
+            long m_InFunction = reentryDictionary.ContainsKey(action) ? reentryDictionary[action] : 0;
+
+            if (Interlocked.CompareExchange(ref m_InFunction, 1, 0) == 0)
+            {
+                // We're not in the function
+                try
+                {
+                    action();
+                }
+                finally
+                {
+                    long temp;
+                    reentryDictionary.TryRemove(action, out temp);
+                }
+            }
+            else
+            {
+                // We're already in the function
+            }
+        }
+
+        public static int toUnixTime(this DateTime dateTime)
+        {
+            return (int)dateTime.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
+        }
+
+        public static DateTime fromUnixTime(this int time)
+        {
+            return new DateTime(1970, 1, 1).AddSeconds(time);
         }
     }
 }

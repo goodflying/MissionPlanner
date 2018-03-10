@@ -235,7 +235,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             var dr = CustomMessageBox.Show(Strings.AreYouSureYouWantToUpload + fwtoupload.name + Strings.QuestionMark,
                 Strings.Continue, MessageBoxButtons.YesNo);
-            if (dr == DialogResult.Yes)
+            if (dr == (int)DialogResult.Yes)
             {
                 try
                 {
@@ -440,16 +440,6 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             {
                 CustomMessageBox.Show("http://www.proficnc.com/?utm_source=missionplanner&utm_medium=click&utm_campaign=mission", Strings.ERROR);
             }
-        }
-
-        private void imageLabel1_Click(object sender, EventArgs e)
-        {
-            Custom_firmware_label_Click(sender, e);
-        }
-
-        private void imageLabel1_Load(object sender, EventArgs e)
-        {
-           
         }
     }
 }

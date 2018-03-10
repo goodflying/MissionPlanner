@@ -129,8 +129,6 @@ namespace MissionPlanner.Utilities
             // Create a request using a URL that can receive a post. 
             string requestUriString = baseurl;
 
-            L10N.ReplaceMirrorUrl(ref requestUriString);
-
             log.Info("Checking for update at: " + requestUriString);
             var webRequest = WebRequest.Create(requestUriString);
             webRequest.Timeout = 5000;
@@ -197,14 +195,11 @@ namespace MissionPlanner.Utilities
                     if (dobeta)
                         extra = "BETA ";
 
-                    DialogResult dr = DialogResult.Cancel;
-
-
-                    dr = CustomMessageBox.Show(
+                    var dr = CustomMessageBox.Show(
                         extra + Strings.UpdateFound + " [link;" + baseurl + "/ChangeLog.txt;ChangeLog]",
                         Strings.UpdateNow, MessageBoxButtons.YesNo);
 
-                    if (dr == DialogResult.Yes)
+                    if (dr == (int)DialogResult.Yes)
                     {
                         DoUpdate();
                     }
@@ -247,8 +242,6 @@ namespace MissionPlanner.Utilities
 
         static void CheckMD5(IProgressReporterDialogue frmProgressReporter, string md5url, string baseurl)
         {
-            L10N.ReplaceMirrorUrl(ref baseurl);
-
             log.InfoFormat("get checksums {0} - base {1}", md5url, baseurl);
 
             string responseFromServer = "";
